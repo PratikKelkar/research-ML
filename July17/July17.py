@@ -4,9 +4,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn import svm
 
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-
 #load all data
 X = np.load("july11x.npy")
 Y = np.load("july11y.npy")
@@ -26,93 +23,74 @@ def chooseV(v, matx, maty):
         c+=1
     return (choicex, maty)
 
-#create values of c and gamma for the gridsearch
-clist = np.logspace(-10, 7, base=2)
-#gammas = np.asarray([.0001,.001,.01,.1,1])
-gammas = np.logspace(-17,0,base=2)
-#store all data: vox#, split#, bestc, bestg, score
-alldata = []
+#set values of c and gamma 
+c = 3
+g = 0.005
+
+#final lists to store all data
+ALL_DATA = []
+TOTAL_AVGS = []
+
+#loop through all 2447 voxels    
+for vox in range(2447):
+    seed = 32
+
+    vox_x, vox_y = chooseV(vox, x_train, y_train)
 
 
-def run():
+    #create the 5 cases to iterate over
 
-    TESTING = True
-    
-    
-    for vox in range(2447):
-        if(TESTING and (vox)%10==0 and vox!=0): vox+=40
-        #split remaining data into training and validation using 5 fold kcross
-        seed = 32
-        num_splits = 5
-                                                            #kf = KFold(n_splits=num_splits, shuffle=True, random_state=seed)
-        vox_x, vox_y = chooseV(vox, x_train, y_train)
+    train_iters = [(vox_x[0:78], vox_y[0:78]),
+                   (np.concatenate((vox_x[0:52],vox_x[78:104]), axis=0),np.concatenate((vox_y[0:52],vox_y[78:104]), axis=0)),
+                    (np.concatenate((vox_x[0:26],vox_x[52:104]), axis=0),np.concatenate((vox_y[0:26],vox_y[52:104]), axis=0)),
+                     (vox_x[26:104], vox_y[26:104])]
 
-        #create the 5 cases to iterate over
+    valid_iters = [(vox_x[78:104], vox_y[78:104]),
+                   (vox_x[52:78], vox_y[52:78]),
+                   (vox_x[26:52], vox_y[26:52]),
+                   (vox_x[0:26], vox_y[0:26])]
 
-        train_iters = [(vox_x[0:78], vox_y[0:78]),
-                       (np.concatenate((vox_x[0:52],vox_x[78:104]), axis=0),np.concatenate((vox_y[0:52],vox_y[78:104]), axis=0)),
-                        (np.concatenate((vox_x[0:26],vox_x[52:104]), axis=0),np.concatenate((vox_y[0:26],vox_y[52:104]), axis=0)),
-                         (vox_x[26:104], vox_y[26:104])]
+                    
+    #run the cross-validation
 
-        valid_iters = [(vox_x[78:104], vox_y[78:104]),
-                       (vox_x[52:78], vox_y[52:78]),
-                       (vox_x[26:52], vox_y[26:52]),
-                       (vox_x[0:26], vox_y[0:26])]
-                        
+    voxel_avg = 0
+
+    for splitnum in range(4):
+
+        x_t, y_t = train_iters[splitnum]
+        x_v, y_v = valid_iters[splitnum]
+                    
+        #normalize
+        jj = StandardScaler()
+        x_t = jj.fit_transform(x_t)
+        x_v = jj.transform(x_v)
+
+        #run svm
+        clf = svm.SVC(C=c, gamma=g, kernel='rbf',random_state=seed)
+        clf.fit(x_t,y_t)
+        score = clf.score(x_v,y_v)
+
+        voxel_avg += score
+
+        #store all data
+        ALL_DATA.append((vox, splitnum, c, g, score))
+
+
+
+    voxel_avg/=4
+    TOTAL_AVG.append((vox, voxel_avg))
+
+    #intermittently save the arrays in case program crashes
+    if(vox!=0 and vox%300==0):
+        np.save("july17_alldata.npy", ALL_DATA)
+        np.save("july17_voxelavgs.npy", TOTAL_AVGS)
         
-        #run the cross-validation
-        cplotlist = []
-        gplotlist = []
-        zlist = []
-        for splitnum in range(4):
+    print(str(vox) + " finished")
 
-            x_t, y_t = train_iters[splitnum]
-            x_v, y_v = valid_iters[splitnum]
+    
+#Save final data
+np.save("july17_alldata.npy", ALL_DATA)
+np.save("july17_voxelavgs.npy", TOTAL_AVGS)
 
-            '''         
-            #create training and validation sets for this split
-            x_t = vox_x[train_idx]
-            y_t = vox_y[train_idx]
-            x_v = vox_x[vali_idx]
-            y_v = vox_y[vali_idx]
-            '''
-                        
-            #normalize
-            jj = StandardScaler()
-            x_t = jj.fit_transform(x_t)
-            x_v = jj.transform(x_v)
+print("YAY IT WORKED")
 
-            bestscore = 0
-            bestc = 0
-            bestg = 0
-            
-            #run gridsearch to find best c and gamma for this split
-            for i in clist:
-                for j in gammas:
-                    clf = svm.SVC(C=i, gamma=j, kernel='rbf',random_state=seed)
-                    clf.fit(x_t,y_t)
-                    score = clf.score(x_v,y_v)
-                    #print(clf.predict(x_v))
-                    #if(i==1.0): print("LOL " + str(score))
-                    cplotlist.append(i)
-                    gplotlist.append(j)
-                    zlist.append(score)
-                    if score>bestscore:
-                        bestscore = score
-                        bestc = i
-                        bestg = j
-
-            #store all data
-            alldata.append((vox, splitnum, bestc, bestg, bestscore))
-            #if score>.6:
-            print(str(vox) + ", split=" + str(splitnum+1) + ": bestc=" + str(bestc) + " , bestg=" + str(bestg) + " , score=" + str(bestscore))
-
-            
-            
-            
-
-run()
-
-
-
-        
