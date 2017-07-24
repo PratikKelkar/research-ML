@@ -25,18 +25,18 @@ words_in_cat = [[6, 18, 30, 42, 54], [7, 19, 31, 43, 55], [8, 20, 32, 44, 56],
 
 i = 0
 for key, val in data.items():
+    if "W" in key:
+        #add to entire_matrix_x
+        entire_matrix_x[i] = val[:,201:851] 
 
-    #add to entire_matrix_x
-    entire_matrix_x[i] = val[:,201:851] 
-
-    #generate y value and add to entire_matrix_y
-    row_pres = np.zeros((12,))
-    for cat in words_in_cat:
-        for pres in cat:
-            if str(key[2:4]) == str(pres).zfill(2):
-                row_pres[words_in_cat.index(cat)] = 1
-    entire_matrix_y[i] = row_pres
-    i+=1
+        #generate y value and add to entire_matrix_y
+        row_pres = np.zeros((12,))
+        for cat in words_in_cat:
+            for pres in cat:
+                if str(key[2:4]) == str(pres).zfill(2):
+                    row_pres[words_in_cat.index(cat)] = 1
+        entire_matrix_y[i] = row_pres
+        i+=1
 
 savenamex = matlab_matrix_name[:-4] + "_x.npy"
 savenamey = matlab_matrix_name[:-4] + "_y.npy"
