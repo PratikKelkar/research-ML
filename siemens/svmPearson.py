@@ -138,7 +138,7 @@ print("===================================")
 print("Pearson results")
 for i in range(400):
     (prsn,idx) = heappop(SHheap)
-    print("Band: " + str(svm_save_states[idx][0]) + " | Time: " + str(svm_save_states[idx][1]) + " | Channel: " + str(svm_save_states[idx][2]) +
+    print("Band: " + str(sh_save_states[idx][0]) + " | Time: " + str(sh_save_states[idx][1]) + " | Channel: " + str(sh_save_states[idx][2]) +
           " | Pearson: " + str(prsn))
     sh_results.append((prsn, sh_save_states[idx][3], sh_save_states[idx][0], sh_save_states[idx][1], sh_save_states[idx][2]))
 
