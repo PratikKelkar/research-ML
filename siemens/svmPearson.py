@@ -4,6 +4,8 @@ from sklearn.svm import SVC
 from heapq import heappush, heappop, heappushpop
 import itertools
 from scipy.stats import pearsonr
+from matnumpy import mat_to_numpy
+from scipy.io import loadmat
 
 results_SVM = []    #massive record of all results for each CBTR Vector analyzed using Dalponte's method
 results_shinkareva = []  #massive record of all results for each CBTR Vector analyzed using Shinkareva's method
@@ -19,9 +21,21 @@ dT = 50
 #number of examples to use in sampling procedure, downsample to 100 Hz
 tE = 10
 
-Y = [] #the correct classification -> vector of length 88
+#data is organized as follows: a,t,a,t,a,t,a,t,a,t,t (a=animal, t=tool) -> word repeats every 10th time -> animal at 0 is same as animal at 10, 20,etc
+#all the way to 100. This ensures that data is not unevenly split into testing, training and validation.
+Bands, Y = mat_to_numpy()  #Bands is list of len(5), with Bands[i] being a 110x256x750 matrix    |||| Y is a 110x1 numpy array.
 
-Bands = []  #len(Bands)=5, extracted data filtered at each of the bands -> each Bands[i] is a 88x256x750 matrix 
+#split data into testing and rest. set aside testing for now (save as testdatax, testdatay.npy).
+TESTBANDSX = []
+TESTY = np.zeros((22,1))
+for i in range(len(Bands)):
+    TESTBANDSX.append(Bands[i][88:110])
+TESTY = Y[88:110]
+
+np.save("testdatax.npy", np.asarray(TESTBANDSX))
+np.save("testdatay.npy", TESTY)
+    
+print("test data split!!")
 
 SVMheap = []
 svm_save_states = dict()
