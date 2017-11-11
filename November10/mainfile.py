@@ -95,11 +95,9 @@ def get_feature_matrix(category1, category2):
                         
                         trainlabels[presnum]=categoryof[wordnum]
                         
-                        for tEStart in range(t,t+tWidth-tEx,tEx): #think abt this one more
+                        for tEStart in range(t,t+tWidth-tEx,tEx):
                             featureVectorShTrain[presnum][feature_vector_position] = np.average(TrainingData[band_num][wordnum][pres][channel][tEStart:tEStart+int(tWidth/tEx)])
-                           
                             feature_vector_position+=1
-                        print(featureVectorShTrain[presnum])
                         presnum+=1
  
                 #YOIT
@@ -121,8 +119,7 @@ def get_feature_matrix(category1, category2):
  
     #top 400
     toSelect = 10 #how many of the best do we pick
-    grandmatrixtrain = np.zeros( (training_amt*total_words, toSelect * tEx) )
-    grandmatrixtest = np.zeros( ((10-training_amt)*total_words, toSelect*tEx))
+
     templist = [] #stores the flattened training vectors
     templist2 = [] #stores BTC parameters for the vectors
     for i in range(400):
@@ -130,66 +127,71 @@ def get_feature_matrix(category1, category2):
         if(i>=400-toSelect):
             templist.append(flatten)
             templist2.append( (band_num,t,channel) )
-            print(str(pearsoncoeff) + " " + str(band_num) + "  " + str(t) + " "+ str(channel) +" ")
-    
-    for pres in range(training_amt*total_words):
-        thislist = []
-        for i in range(len(templist)):
+            #print(str(pearsoncoeff) + " " + str(band_num) + "  " + str(t) + " "+ str(channel) +" ")
+
+    for picker in range(toSelect-1,-1,-1):
+        #print(templist2[picker])
+        grandmatrixtrain = np.zeros( (training_amt*total_words,  tEx) )
+        grandmatrixtest = np.zeros( ((10-training_amt)*total_words, tEx))
+        for pres in range(training_amt*total_words):
+            thislist = []
             for j in range(tEx):
-                grandmatrixtrain[pres][i*tEx + j] = templist[i][pres*tEx+j]
-    
+                grandmatrixtrain[pres][j] = templist[picker][pres*tEx+j]
         
+        
+
     
-    #build testing feature matrix and labels
-    for pres in range((10-training_amt)*total_words):
-        for i in range(toSelect):
+    
+        #build testing feature matrix and labels
+        for pres in range((10-training_amt)*total_words):
+            
             testlabels[(pres%total_words)] = categoryof[(pres%total_words)]
-            (band_num, t, channel) = templist2[i]
+            (band_num, t, channel) = templist2[picker]
 
             ptrO = 0
             for tEStart in range(t,t+tWidth-tEx,tEx):
-                grandmatrixtest[pres][i*tEx + ptrO] = np.average(TestingData[band_num][pres%total_words][int(pres/total_words)][channel][tEStart:tEStart+int(tWidth/tEx)])
+                grandmatrixtest[pres][ptrO] = np.average(TestingData[band_num][pres%total_words][int(pres/total_words)][channel][tEStart:tEStart+int(tWidth/tEx)])
                 ptrO += 1
-                
+                    
 
-    
-    clist = np.logspace(-3,2,100)
-    bst_acc = 0
-    bst_c = 0
-    for c in clist:
-        avg_acc = 0
-        for fold in range(4):
-            fold_size = int(training_amt*total_words/4)
-            valid_x = grandmatrixtrain[ (fold_size*fold) : ((fold_size)*(fold+1))]
-            valid_y = trainlabels[ (fold_size*fold) : ((fold_size)*(fold+1))]
-            tr_x = np.concatenate( (grandmatrixtrain[0:(fold_size*fold)],grandmatrixtrain[(fold+1)*fold_size:training_amt*total_words]), axis=0)
-            tr_y = np.concatenate( (trainlabels[0:(fold_size*fold)],trainlabels[(fold+1)*fold_size:training_amt*total_words]), axis=0)
+        
+        clist = np.logspace(-3,2,100)
+        bst_acc = 0
+        bst_c = 0
+        for c in clist:
+            avg_acc = 0
+            for fold in range(4):
+                fold_size = int(training_amt*total_words/4)
+                valid_x = grandmatrixtrain[ (fold_size*fold) : ((fold_size)*(fold+1))]
+                valid_y = trainlabels[ (fold_size*fold) : ((fold_size)*(fold+1))]
+                tr_x = np.concatenate( (grandmatrixtrain[0:(fold_size*fold)],grandmatrixtrain[(fold+1)*fold_size:training_amt*total_words]), axis=0)
+                tr_y = np.concatenate( (trainlabels[0:(fold_size*fold)],trainlabels[(fold+1)*fold_size:training_amt*total_words]), axis=0)
 
-            scaler = StandardScaler()
-            tr_x = scaler.fit_transform(tr_x)
-            valid_x = scaler.transform(valid_x)
-            tr_y = np.ravel(tr_y)
-            valid_y = np.ravel(valid_y)
+                scaler = StandardScaler()
+                tr_x = scaler.fit_transform(tr_x)
+                valid_x = scaler.transform(valid_x)
+                tr_y = np.ravel(tr_y)
+                valid_y = np.ravel(valid_y)
 
-            classifier = LinearSVC(C=c)
-            classifier.fit(tr_x,tr_y)
-            avg_acc += (classifier.score(valid_x,valid_y))/4.0
-        if(avg_acc > bst_acc):
-            bst_acc = avg_acc
-            bst_c = c
-    #print("YET " + str(bst_c))
-    classifier = LinearSVC(C=bst_c)
-    scaler = StandardScaler()
-    grandmatrixtrain = scaler.fit_transform(grandmatrixtrain)
-    grandmatrixtest = scaler.transform(grandmatrixtest)
-    trainlabels = np.ravel(trainlabels)
-    testlabels = np.ravel(testlabels)
-    classifier.fit(grandmatrixtrain,trainlabels)
-    f.write(str(category1) + " " + str(category2) + " " + str(classifier.score(grandmatrixtest,testlabels)))
-    print(str(category1) + " " + str(category2) + " " + str(classifier.score(grandmatrixtest,testlabels)))
+                classifier = LinearSVC(C=c)
+                classifier.fit(tr_x,tr_y)
+                avg_acc += (classifier.score(valid_x,valid_y))/4.0
+            if(avg_acc > bst_acc):
+                bst_acc = avg_acc
+                bst_c = c
+        #print("YET " + str(bst_c))
+        classifier = LinearSVC(C=bst_c)
+        scaler = StandardScaler()
+        grandmatrixtrain = scaler.fit_transform(grandmatrixtrain)
+        grandmatrixtest = scaler.transform(grandmatrixtest)
+        trainlabels = np.ravel(trainlabels)
+        testlabels = np.ravel(testlabels)
+        classifier.fit(grandmatrixtrain,trainlabels)
+        #f.write(str(category1) + " " + str(category2) + " " + str(classifier.score(grandmatrixtest,testlabels)))
+        print(str(category1) + " " + str(category2) + " " + str(picker) + " " + str(classifier.score(grandmatrixtest,testlabels)))
 
-    #print(classifier.predict(grandmatrixtest))
-    #print(testlabels)
+        #print(classifier.predict(grandmatrixtest))
+        #print(testlabels)
 
 f = open("results_10.29.txt", "w") 
 for i in itertools.combinations(range(12),2):
