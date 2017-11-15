@@ -85,43 +85,45 @@ def get_feature_matrix(category1, category2):
     TrainWords = []
     TestWords = []
 
-    for band_num in range(5):
-        #print(band_num)
-        for t in range(tStart, tEnd-tWidth+1, tIncr): #various starts of time slice
-            #print(t)
-            for channel in range(256):
-                featureVectorShTrain= np.zeros((training_amt*total_words,tEx))
-                presnum = 0
-                for pres in range(training_amt):
-                    for wordnum in range(total_words): #pres then word ordering important to make sure ShTrain ends with even in each chunk of 10 (i.e. 1,2,3...10, 1,2,3...10, etc)
-                        feature_vector_position = 0
-                        
-                        trainlabels[presnum]=categoryof[wordnum]
-                        
-                        for tEStart in range(t,t+tWidth-tEx+1,tEx): #think abt this one more
-                            featureVectorShTrain[presnum][feature_vector_position] = np.average(TrainingData[band_num][wordnum][pres][channel][tEStart:tEStart+int(tWidth/tEx)])
-                           
-                            feature_vector_position+=1
-                        #print(featureVectorShTrain[presnum])
-                        presnum+=1
- 
-                #YOIT
-                #feature vector should be generated
-                flattened = featureVectorShTrain.flatten()
-                #first (10 features * 11 words) is first chunk
-                chunksz = 10 * total_words
- 
-                pearsoncoeff = 0
-                for i in range(training_amt-1):
-                    for j in range(i+1,training_amt):
-                        pearsoncoeff += pearsonr(flattened[i*chunksz:(i+1)*chunksz], flattened[j*chunksz:(j+1)*chunksz])[0]
- 
-                pearsoncoeff /= 28
-                if(len(SHheap)<400):
-                    heappush(SHheap, (pearsoncoeff, band_num, t, channel, flattened))#push this btc vector
-                else:
-                    heappushpop(SHheap, (pearsoncoeff, band_num, t, channel, flattened))
- 
+    
+    #print(band_num)
+    #fixes band_num  = 1 for optimized performance
+    band_num = 1
+    for t in range(tStart, tEnd-tWidth+1, tIncr): #various starts of time slice
+        #print(t)
+        for channel in range(256):
+            featureVectorShTrain= np.zeros((training_amt*total_words,tEx))
+            presnum = 0
+            for pres in range(training_amt):
+                for wordnum in range(total_words): #pres then word ordering important to make sure ShTrain ends with even in each chunk of 10 (i.e. 1,2,3...10, 1,2,3...10, etc)
+                    feature_vector_position = 0
+
+                    trainlabels[presnum]=categoryof[wordnum]
+
+                    for tEStart in range(t,t+tWidth-tEx+1,tEx): #think abt this one more
+                        featureVectorShTrain[presnum][feature_vector_position] = np.average(TrainingData[band_num][wordnum][pres][channel][tEStart:tEStart+int(tWidth/tEx)])
+
+                        feature_vector_position+=1
+                    #print(featureVectorShTrain[presnum])
+                    presnum+=1
+
+            #YOIT
+            #feature vector should be generated
+            flattened = featureVectorShTrain.flatten()
+            #first (10 features * 11 words) is first chunk
+            chunksz = 10 * total_words
+
+            pearsoncoeff = 0
+            for i in range(training_amt-1):
+                for j in range(i+1,training_amt):
+                    pearsoncoeff += pearsonr(flattened[i*chunksz:(i+1)*chunksz], flattened[j*chunksz:(j+1)*chunksz])[0]
+
+            pearsoncoeff /= 28
+            if(len(SHheap)<400):
+                heappush(SHheap, (pearsoncoeff, band_num, t, channel, flattened))#push this btc vector
+            else:
+                heappushpop(SHheap, (pearsoncoeff, band_num, t, channel, flattened))
+
     #top 400
     toSelect = 10 #how many of the best do we pick
     grandmatrixtrain = np.zeros( (training_amt*total_words, toSelect * tEx) )
