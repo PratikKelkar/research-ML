@@ -12,7 +12,7 @@ def get_feature_matrix(category1, category2):
     all_data = np.load("all_data.npy")
     category_info = np.load("words_in_categories.npy")
     lengths = np.load("category_lengths.npy")
-    categors = np.load("categorization.npy")
+ #   categors = np.load("categorization.npy")
     tStart = 0 #start time≈
     tEnd = 650 #end time
     tWidth = 100 #width of time slice
